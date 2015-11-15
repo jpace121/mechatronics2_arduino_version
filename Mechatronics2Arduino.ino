@@ -31,7 +31,8 @@
  volatile bool bridge_toggle = 0;
  volatile bool bridge_down = 0;
  volatile long bridge_down_time = 0;
- volatile long wall_swap_time = 0; 
+ volatile long wall_swap_time = 0;
+ volatile long last_tx = 0; 
 
  // Servos
  Servo bridge_servo;
@@ -43,9 +44,9 @@ void setup() {
 
   // Attach interrupt pins. Seemingly, marks as input for you...
   attachInterrupt(digitalPinToInterrupt(FLEX_PIN), flex_handler, RISING);
-  attachInterrupt(digitalPinToInterrupt(IR1), ir1_handler, FALLING);
-  attachInterrupt(digitalPinToInterrupt(IR2), ir2_handler, FALLING);
-  attachInterrupt(digitalPinToInterrupt(IR3), ir3_handler, FALLING);
+  attachInterrupt(digitalPinToInterrupt(IR1), ir1_handler, RISING);
+  attachInterrupt(digitalPinToInterrupt(IR2), ir2_handler, RISING);
+  attachInterrupt(digitalPinToInterrupt(IR3), ir3_handler, RISING);
 
   // Servos
   bridge_servo.attach(BRIDGE);
@@ -97,8 +98,9 @@ void loop() {
     wall_swap_time = millis();
   }
   
-  if(!(millis()%2000)){
+  if((millis()-last_tx) > 1000){
     Serial.println(score);
+    last_tx = millis();
   }
 
 }
