@@ -61,13 +61,33 @@ void setup() {
   // Set up serial monitor.
   Serial.begin(9600);
 
-  // Reset initial status of globals. Doens't seem to reset otherwise...
+  // Set up RTI handler.
+  // Inspiration gleaned from:
+  //     https://learn.adafruit.com/multi-tasking-the-arduino-part-2/timers
+  // Approach: use the fact that Timer0 is set up already for millis by setting
+  // up an output compare to a random time and then running our interrupt code.
+  OCR0A = 0xAF; // set time to trigger interrupt, exact time does not matter,
+                // will hit any time once a cycle. Each cycle is approximately
+                // 1.024 ms.
+  TIMSK0 |= _BV(OCIE0A); // enables interrupt on output compare.
+                         // BV is a macro for 1 << (x)
+                         // OCIE0A is the position bit which is predefined for
+                         // us.
+  
+  // Reset initial status of globals. Doesn't seem to reset otherwise...
   // Probably because they are volatile?
+  // (Are these needed? They don't hurt anything...)
   score = 0;
   bridge_down = 0;
   bridge_down_time = 0;
   wall_swap_time = millis();
   bridge_toggle = 0; 
+}
+
+ISR(TIMER0_COMPA_vect) {
+    // Interrupt Service Routine for the output compare.
+    // Runs every 1.024 ms.
+    // Interrupt will be used for PID control.
 }
 
 void loop() {
