@@ -6,6 +6,18 @@
  * James Pace
  */
 
+// Debug definitions.
+/* Options that the program looks for (1 is on 0 is off):
+   PRINT_SEPARATOR // print line to separator each debug block
+   PRINT_ENCODER // print encoder cnts every few seconds
+   PRINT_DEGREES // print position of motor every few seconds
+   PRINT_SPEED  // print speed in degrees/s
+*/
+#define PRINT_SEPARATOR 1
+#define PRINT_ENCODER   0
+#define PRINT_DEGREES   1
+#define PRINT_SPEED     0
+
  // Pin Number Mapping
  #define FLEX_PIN 18   //Interrupt
  #define IR1      19   //Interrupt
@@ -20,6 +32,9 @@
  // 5 and 6 skipped because both come from Timer0, which I'm using for the
  // timer compare already, and I don't want to overuse it if I can help it.
 
+ //PID Constants
+ #define CNTSPERREV 600. //estimate
+
  //Servo Position Constants
  #define BRIDGEUP 0
  #define BRIDGEDOWN 90
@@ -30,17 +45,19 @@
  void ir2_handler();
  void encoderA_handler();
  void encoderB_handler();
+ int degreesFromCnts(int, int);
 
  // Global Variables.
  // (Can I get rid of some of these by using statics?)
- volatile int score = 0;
- volatile bool bridge_toggle = 0;
- volatile bool bridge_down = 0;
- volatile long bridge_down_time = 0;
- volatile long wall_swap_time = 0;
- volatile long last_tx = 0;
- volatile int encoderA_cnt = 0;
- volatile int encoderB_cnt = 0;
+ int score = 0;
+ bool bridge_toggle = 0;
+ bool bridge_down = 0;
+ long bridge_down_time = 0;
+ long wall_swap_time = 0;
+ long last_tx = 0;
+ unsigned int encoder_cnt = 0;
+ float curPos_degrees = 0;
+ float speed = 0;
 
  // Servos
  Servo bridge_servo;
@@ -122,41 +139,77 @@ void loop() {
     }
     wall_swap_time = millis();
   }
-  
-  if((millis()-last_tx) > 1000){
-    Serial.println(score);
+
+  // Debug serial prints, once every 2 seconds.
+  if((millis()-last_tx) > 2000){
+    #if PRINT_SEPARATOR
+      Serial.println("------------");
+    #endif
+    #if PRINT_ENCODER
+      Serial.print("Encoder Count: ");
+      Serial.println(encoder_cnt);
+    #endif
+    #if PRINT_DEGREES
+      Serial.print("Position in Degrees: ");
+      Serial.println(curPos_degrees);
+    #endif
+    #if PRINT_SPEED
+      Serial.print("Speed deg/s: ");
+      Serial.println(speed);
+    #endif
     last_tx = millis();
   }
 
+}
+
+float degreesFromCnts(int cnt)
+{
+  // (should this be a macro?)
+    return (float)(cnt*(360./CNTSPERREV));
 }
 
 ISR(TIMER0_COMPA_vect) {
     // Interrupt Service Routine for the output compare.
     // Runs every 1.024 ms.
     // Interrupt will be used to change the PWM via PID.
-    static int last_cnt = 0;
-
-    /*
-      Algorithm:
-      1. Find current speed and direction from encoder counts.
-      2. Compare to desired speed.
-      3. Calculate new control PWM using PID.
-     */
-
-    //Find current speed from encoder counts.
+    static float last_pos;
+    static int last_cnt;
     
-    
+    //Update current position in degrees.
+    curPos_degrees += degreesFromCnts(encoder_cnt-last_cnt);
+    last_cnt = encoder_cnt;
+
+    // speed in deg/s is deg/time.
+    speed = (curPos_degrees-last_pos)*1024.; // <-- magic constant
+    last_pos = curPos_degrees;
 
 }
 
+/*
+ Encoder stuff stolen from:
+     http://www.edn.com/design/integrated-circuit-design/4363949/Decode-a-quadrature-encoder-in-software
+ */
+
 void encoderA_handler() {
     // Triggers on rise of encoder channel A.
-    encoderA_cnt++;
+    // If here, then A is high, and we should check B. If B low, than A is leading.
+    // A leading will be direction positive.
+    if(digitalRead(ENCODEB) == 0) {
+        encoder_cnt++;
+    } else {
+        encoder_cnt--;
+    }
 }
 
 void encoderB_handler() {
     // Triggers on rise of encoder channel B.
-    encoderB_cnt++;
+    // If here, then B is high, and we should check A. If A low, than B is leading.
+    // A leading will be direction positive.
+    if(digitalRead(ENCODEA) == 1) {
+        encoder_cnt++;
+    } else {
+        encoder_cnt--;
+    }
 }
 
 void flex_handler() {
