@@ -14,8 +14,8 @@
    PRINT_SPEED  // print speed in degrees/s
 */
 #define PRINT_SEPARATOR 1
-#define PRINT_ENCODER   1
-#define PRINT_DEGREES   1
+#define PRINT_ENCODER   0
+#define PRINT_DEGREES   0
 #define PRINT_SPEED     1
 
  // Pin Number Mapping
@@ -60,8 +60,9 @@
  long wall_swap_time = 0;
  long last_tx = 0;
  unsigned int encoder_cnt = 0;
- float curPos_degrees = 0;
- float speed = 0;
+ double curPos_degrees = 0.;
+ int encode_speed = 0;
+ unsigned int last_cnt_speed = 0;
 
  // Servos
  Servo bridge_servo;
@@ -109,6 +110,7 @@ void setup() {
                          // BV is a macro for 1 << (x)
                          // OCIE0A is the position bit which is predefined for
                          // us.
+                         // CTC1 bit in TCCR1B
   
   // Reset initial status of globals. Doesn't seem to reset otherwise...
   // Probably because they are volatile?
@@ -121,9 +123,9 @@ void setup() {
 
   // Test for lab.
   digitalWrite(MOTOREN, HIGH);
-  digitalWrite(MOTORC, LOW);
-  digitalWrite(MOTORD, HIGH);
-  analogWrite(MOT_PWM,125);
+  digitalWrite(MOTORC, HIGH);
+  digitalWrite(MOTORD, LOW);
+  analogWrite(MOT_PWM,255);
   
 }
 
@@ -155,7 +157,7 @@ void loop() {
     wall_swap_time = millis();
   }
 
-  // Debug serial prints, once every 2 seconds.
+  // Debug serial prints, once every 1 seconds.
   if((millis()-last_tx) > 1000){
     #if PRINT_SEPARATOR
       Serial.flush();
@@ -170,8 +172,9 @@ void loop() {
       Serial.println(degreesFromCnts(encoder_cnt));
     #endif
     #if PRINT_SPEED
-      Serial.print("Speed deg/s: ");
-      Serial.println(speed);
+      Serial.print("Speed: ");
+      Serial.println(degreesFromCnts(encoder_cnt) - degreesFromCnts(last_cnt_speed));
+      last_cnt_speed = encoder_cnt;
     #endif
     last_tx = millis();
   }
@@ -184,20 +187,17 @@ ISR(TIMER0_COMPA_vect) {
     // Interrupt Service Routine for the output compare.
     // Runs every 1.024 ms.
     // Interrupt will be used to change the PWM via PID.
-    static unsigned int last_cnt;
-    unsigned int local_cnt = encoder_cnt; // this is an effort to try to remove wierd 0 issue
+    //static unsigned int last_cnt;
+    //unsigned int local_cnt = encoder_cnt; // this is an effort to try to remove wierd 0 issue
     
-    //Update current position in degrees.
-    //curPos_degrees = degreesFromCnts(local_cnt);
-
     // speed in deg/s is deg/time.
-    speed = (degreesFromCnts(local_cnt)-degreesFromCnts(last_cnt))*1024; // <-- magic constant
-    last_cnt = local_cnt;
+    //encode_speed = encoder_cnt - last_cnt;
+    //last_cnt = encoder_cnt;
 
 }
 
- float degreesFromCnts(unsigned int cnt) {
-    return (float) ((cnt)*(360./CNTSPERREV));
+ double degreesFromCnts(unsigned int cnt) {
+    return (double) ((cnt)*(360./CNTSPERREV));
  }
 
 /*
@@ -209,10 +209,10 @@ void encoderA_handler() {
     // Triggers on rise of encoder channel A.
     // If here, then A is high, and we should check B. If B low, than A is leading.
     // A leading will be direction positive.
-    if(digitalRead(ENCODEB) == 0) {
-        encoder_cnt++;
-    } else {
+    if(digitalRead(ENCODEB) == 1) {
         encoder_cnt--;
+    } else {
+        encoder_cnt++;
     }
 }
 
