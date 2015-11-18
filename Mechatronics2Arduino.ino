@@ -60,9 +60,8 @@
  long wall_swap_time = 0;
  long last_tx = 0;
  unsigned int encoder_cnt = 0;
- double curPos_degrees = 0.;
  int encode_speed = 0;
- unsigned int last_cnt_speed = 0;
+ unsigned int last_cnt_forspeed = 0; //this could probably be made a static in loop?
 
  // Servos
  Servo bridge_servo;
@@ -173,8 +172,9 @@ void loop() {
     #endif
     #if PRINT_SPEED
       Serial.print("Speed: ");
-      Serial.println(degreesFromCnts(encoder_cnt) - degreesFromCnts(last_cnt_speed));
-      last_cnt_speed = encoder_cnt;
+      //I would rather calculate this stuff in an RTI, but my RTI is so small, I only see like two cnts ever.
+      Serial.println(degreesFromCnts(encoder_cnt) - degreesFromCnts(last_cnt_forspeed)/1.);
+      last_cnt_forspeed = encoder_cnt;
     #endif
     last_tx = millis();
   }
