@@ -14,9 +14,9 @@
    PRINT_SPEED  // print speed in degrees/s
 */
 #define PRINT_SEPARATOR 1
-#define PRINT_ENCODER   0
+#define PRINT_ENCODER   1
 #define PRINT_DEGREES   1
-#define PRINT_SPEED     0
+#define PRINT_SPEED     1
 
  // Pin Number Mapping
  #define FLEX_PIN 18   //Interrupt
@@ -29,11 +29,16 @@
  #define MOT_PWM  4   //PWM
  #define ENCODEA  3   //Interrupt
  #define ENCODEB  2   //Interrupt
+ #define MOTOREN  A15  // GPIO
+ #define MOTORC   A14  //GPIO
+ #define MOTORD   A13  //GPIO
  // 5 and 6 skipped because both come from Timer0, which I'm using for the
  // timer compare already, and I don't want to overuse it if I can help it.
 
  //PID Constants
  #define CNTSPERREV 600. //estimate
+
+
 
  //Servo Position Constants
  #define BRIDGEUP 0
@@ -45,7 +50,6 @@
  void ir2_handler();
  void encoderA_handler();
  void encoderB_handler();
- int degreesFromCnts(int, int);
 
  // Global Variables.
  // (Can I get rid of some of these by using statics?)
@@ -74,6 +78,11 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(IR3), ir3_handler, RISING);
   attachInterrupt(digitalPinToInterrupt(ENCODEA), encoderA_handler, RISING);
   attachInterrupt(digitalPinToInterrupt(ENCODEB), encoderB_handler, RISING);
+
+  // GPIO for enable and direction keys for windmill
+  pinMode(MOTOREN, OUTPUT);
+  pinMode(MOTORC, OUTPUT);
+  pinMode(MOTORD, OUTPUT);
 
   // Servos
   bridge_servo.attach(BRIDGE);
@@ -110,6 +119,12 @@ void setup() {
   wall_swap_time = millis();
   bridge_toggle = 0;
 
+  // Test for lab.
+  digitalWrite(MOTOREN, HIGH);
+  digitalWrite(MOTORC, LOW);
+  digitalWrite(MOTORD, HIGH);
+  analogWrite(MOT_PWM,125);
+  
 }
 
 void loop() {
@@ -141,8 +156,9 @@ void loop() {
   }
 
   // Debug serial prints, once every 2 seconds.
-  if((millis()-last_tx) > 2000){
+  if((millis()-last_tx) > 1000){
     #if PRINT_SEPARATOR
+      Serial.flush();
       Serial.println("------------");
     #endif
     #if PRINT_ENCODER
@@ -151,7 +167,7 @@ void loop() {
     #endif
     #if PRINT_DEGREES
       Serial.print("Position in Degrees: ");
-      Serial.println(curPos_degrees);
+      Serial.println(degreesFromCnts(encoder_cnt));
     #endif
     #if PRINT_SPEED
       Serial.print("Speed deg/s: ");
@@ -162,28 +178,27 @@ void loop() {
 
 }
 
-float degreesFromCnts(int cnt)
-{
-  // (should this be a macro?)
-    return (float)(cnt*(360./CNTSPERREV));
-}
+
 
 ISR(TIMER0_COMPA_vect) {
     // Interrupt Service Routine for the output compare.
     // Runs every 1.024 ms.
     // Interrupt will be used to change the PWM via PID.
-    static float last_pos;
-    static int last_cnt;
+    static unsigned int last_cnt;
+    unsigned int local_cnt = encoder_cnt; // this is an effort to try to remove wierd 0 issue
     
     //Update current position in degrees.
-    curPos_degrees += degreesFromCnts(encoder_cnt-last_cnt);
-    last_cnt = encoder_cnt;
+    //curPos_degrees = degreesFromCnts(local_cnt);
 
     // speed in deg/s is deg/time.
-    speed = (curPos_degrees-last_pos)*1024.; // <-- magic constant
-    last_pos = curPos_degrees;
+    speed = (degreesFromCnts(local_cnt)-degreesFromCnts(last_cnt))*1024; // <-- magic constant
+    last_cnt = local_cnt;
 
 }
+
+ float degreesFromCnts(unsigned int cnt) {
+    return (float) ((cnt)*(360./CNTSPERREV));
+ }
 
 /*
  Encoder stuff stolen from:
