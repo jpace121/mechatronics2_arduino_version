@@ -37,8 +37,10 @@
 
  //PID Constants
  #define CNTSPERREV 600. //estimate
-
-
+ #define KP (1)
+ #define KD (1)
+ #define KI (1)
+ #define DESIREDHZ (1.)
 
  //Servo Position Constants
  #define BRIDGEUP 0
@@ -186,13 +188,18 @@ void loop() {
 ISR(TIMER0_COMPA_vect) {
     // Interrupt Service Routine for the output compare.
     // Runs every 1.024 ms.
+    // This may be too fast to be any good.
     // Interrupt will be used to change the PWM via PID.
-    //static unsigned int last_cnt;
-    //unsigned int local_cnt = encoder_cnt; // this is an effort to try to remove wierd 0 issue
-    
-    // speed in deg/s is deg/time.
-    //encode_speed = encoder_cnt - last_cnt;
-    //last_cnt = encoder_cnt;
+    // For this function, I'm tracking everything in Hz.
+
+    static double summed_error;
+    static unsigned double last_cnt;
+    int deriv = encoder_cnt - last_cnt; // This will be a really small number.
+
+    summed_error += 
+
+
+    last_cnt = encoder_cnt;
 
 }
 
