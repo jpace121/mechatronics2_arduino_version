@@ -42,6 +42,12 @@
  #define KI (1)
  #define DESIREDHZ (1.)
 
+ //Definitions for AVR functions.
+ #define sbi(port,bit) \
+    (port) |= (1 << (bit))
+ #define cbi(port,bit) \
+    (port) &= ~(1 << (bit)) 
+
  //Servo Position Constants
  #define BRIDGEUP 0
  #define BRIDGEDOWN 90
@@ -85,6 +91,7 @@ void setup() {
   pinMode(MOTOREN, OUTPUT);
   pinMode(MOTORC, OUTPUT);
   pinMode(MOTORD, OUTPUT);
+  pinMode(13, OUTPUT);
 
   // Servos
   bridge_servo.attach(BRIDGE);
@@ -100,6 +107,19 @@ void setup() {
   Serial.begin(9600);
 
   // Set up RTI handler.
+  // Turn on Timer 1
+  cli();
+  TCCR1A = 0; // This is important!!
+  TCCR1B = 0; // This is important!!
+  cbi(PRR0, PRTIM1);
+  // Select clock/1024 (64 Mhz/1024)
+  sbi(TCCR1B, CS10);
+  sbi(TCCR1B, CS12);
+  // Set interrupt on overflow of timer 1
+  sbi(TIMSK1, TOIE1);
+  sei();
+  
+  /*
   // Inspiration gleaned from:
   //     https://learn.adafruit.com/multi-tasking-the-arduino-part-2/timers
   // Approach: use the fact that Timer0 is set up already for millis by setting
@@ -112,6 +132,9 @@ void setup() {
                          // OCIE0A is the position bit which is predefined for
                          // us.
                          // CTC1 bit in TCCR1B
+  // This approach did not work to measure spped. Too fast smaple time = not
+  // enough clicks.
+  */
   
   // Reset initial status of globals. Doesn't seem to reset otherwise...
   // Probably because they are volatile?
@@ -185,13 +208,14 @@ void loop() {
 
 
 
-ISR(TIMER0_COMPA_vect) {
+ISR(TIMER1_OVF_vect) {
     // Interrupt Service Routine for the output compare.
     // Runs every 1.024 ms.
     // This may be too fast to be any good.
     // Interrupt will be used to change the PWM via PID.
     // For this function, I'm tracking everything in Hz.
 
+    /*
     static double summed_error;
     static unsigned double last_cnt;
     int deriv = encoder_cnt - last_cnt; // This will be a really small number.
@@ -200,6 +224,8 @@ ISR(TIMER0_COMPA_vect) {
 
 
     last_cnt = encoder_cnt;
+    */
+    digitalWrite(13, !digitalRead(13));
 
 }
 
