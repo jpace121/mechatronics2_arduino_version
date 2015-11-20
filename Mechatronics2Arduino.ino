@@ -112,9 +112,9 @@ void setup() {
   TCCR1A = 0; // This is important!!
   TCCR1B = 0; // This is important!!
   cbi(PRR0, PRTIM1);
-  // Select clock/1024 (64 Mhz/1024)
+  // Select clock/256 which is about 0.004 s
+  sbi(TCCR1B, CS11);
   sbi(TCCR1B, CS10);
-  sbi(TCCR1B, CS12);
   // Set interrupt on overflow of timer 1
   sbi(TIMSK1, TOIE1);
   sei();
