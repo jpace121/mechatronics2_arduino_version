@@ -14,11 +14,11 @@
    PRINT_SPEED  // print speed in degrees/s
 */
 #define PRINT_SEPARATOR 1
-#define PRINT_ENCODER   0
+#define PRINT_ENCODER   1
 #define PRINT_DEGREES   0
 #define PRINT_SPEED     1
 
- // Pin Number Mapping
+ // Pin Number Mapping (PINOUT)
  #define FLEX_PIN 18   //Interrupt
  #define IR1      19   //Interrupt
  #define IR2      20  //Interrupt
@@ -26,17 +26,17 @@
  #define WALL1    9   //PWM 
  #define WALL2    8   //PWM
  #define BRIDGE   7   //PWM
- #define MOT_PWM  4   //PWM
+ #define MOT_PWM  10   //PWM
  #define ENCODEA  3   //Interrupt
  #define ENCODEB  2   //Interrupt
- #define MOTOREN  A15  // GPIO
  #define MOTORC   A14  //GPIO
  #define MOTORD   A13  //GPIO
  // 5 and 6 skipped because both come from Timer0, which I'm using for the
  // timer compare already, and I don't want to overuse it if I can help it.
 
- //PID Constants
+//PID Constants
  #define CNTSPERREV 600. //estimate
+ #define SAMPLETIME 0.5*0.0000001
  #define KP (1)
  #define KD (1)
  #define KI (1)
@@ -67,9 +67,9 @@
  long bridge_down_time = 0;
  long wall_swap_time = 0;
  long last_tx = 0;
- unsigned int encoder_cnt = 0;
- int encode_speed = 0;
- unsigned int last_cnt_forspeed = 0; //this could probably be made a static in loop?
+ volatile unsigned int encoder_cnt = 0;
+ volatile double encode_speed = 0.;
+ volatile unsigned int last_cnt_forspeed = 0;
 
  // Servos
  Servo bridge_servo;
@@ -88,10 +88,10 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(ENCODEB), encoderB_handler, RISING);
 
   // GPIO for enable and direction keys for windmill
-  pinMode(MOTOREN, OUTPUT);
   pinMode(MOTORC, OUTPUT);
   pinMode(MOTORD, OUTPUT);
-  pinMode(13, OUTPUT);
+  pinMode(MOT_PWM, OUTPUT);
+  pinMode(13, OUTPUT); // this is the bultin LED
 
   // Servos
   bridge_servo.attach(BRIDGE);
@@ -108,33 +108,15 @@ void setup() {
 
   // Set up RTI handler.
   // Turn on Timer 1
-  cli();
+  cli(); //disable interrupts
   TCCR1A = 0; // This is important!!
   TCCR1B = 0; // This is important!!
   cbi(PRR0, PRTIM1);
-  // Select clock/256 which is about 0.004 s
+  // Select clock/8 which is about 2 Mhz or 0.5*10-6 s
   sbi(TCCR1B, CS11);
-  sbi(TCCR1B, CS10);
   // Set interrupt on overflow of timer 1
   sbi(TIMSK1, TOIE1);
-  sei();
-  
-  /*
-  // Inspiration gleaned from:
-  //     https://learn.adafruit.com/multi-tasking-the-arduino-part-2/timers
-  // Approach: use the fact that Timer0 is set up already for millis by setting
-  // up an output compare to a random time and then running our interrupt code.
-  OCR0A = 0xAF; // set time to trigger interrupt, exact time does not matter,
-                // will hit any time once a cycle. Each cycle is approximately
-                // 1.024 ms.
-  TIMSK0 |= _BV(OCIE0A); // enables interrupt on output compare.
-                         // BV is a macro for 1 << (x)
-                         // OCIE0A is the position bit which is predefined for
-                         // us.
-                         // CTC1 bit in TCCR1B
-  // This approach did not work to measure spped. Too fast smaple time = not
-  // enough clicks.
-  */
+  sei(); //reenable interrupts
   
   // Reset initial status of globals. Doesn't seem to reset otherwise...
   // Probably because they are volatile?
@@ -146,10 +128,9 @@ void setup() {
   bridge_toggle = 0;
 
   // Test for lab.
-  digitalWrite(MOTOREN, HIGH);
-  digitalWrite(MOTORC, HIGH);
+  digitalWrite(MOTORC, LOW);
   digitalWrite(MOTORD, LOW);
-  analogWrite(MOT_PWM,255);
+  analogWrite(MOT_PWM,125);
   
 }
 
@@ -198,8 +179,7 @@ void loop() {
     #if PRINT_SPEED
       Serial.print("Speed: ");
       //I would rather calculate this stuff in an RTI, but my RTI is so small, I only see like two cnts ever.
-      Serial.println(degreesFromCnts(encoder_cnt) - degreesFromCnts(last_cnt_forspeed)/1.);
-      last_cnt_forspeed = encoder_cnt;
+      Serial.println(encode_speed);
     #endif
     last_tx = millis();
   }
@@ -210,10 +190,11 @@ void loop() {
 
 ISR(TIMER1_OVF_vect) {
     // Interrupt Service Routine for the output compare.
-    // Runs every 1.024 ms.
-    // This may be too fast to be any good.
     // Interrupt will be used to change the PWM via PID.
     // For this function, I'm tracking everything in Hz.
+
+    encode_speed = radFromCnts(encoder_cnt - last_cnt_forspeed)/(2*PI*SAMPLETIME);
+    last_cnt_forspeed = encoder_cnt;
 
     /*
     static double summed_error;
@@ -225,12 +206,16 @@ ISR(TIMER1_OVF_vect) {
 
     last_cnt = encoder_cnt;
     */
-    digitalWrite(13, !digitalRead(13));
+
 
 }
 
  double degreesFromCnts(unsigned int cnt) {
     return (double) ((cnt)*(360./CNTSPERREV));
+ }
+
+double radFromCnts(unsigned int cnt) {
+    return (double) ((cnt)*(2*PI/CNTSPERREV));
  }
 
 /*
