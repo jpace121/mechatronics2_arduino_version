@@ -11,12 +11,14 @@
    PRINT_SEPARATOR // print line to separator each debug block
    PRINT_ENCODER // print encoder cnts every few seconds
    PRINT_DEGREES // print position of motor every few seconds
-   PRINT_SPEED  // print speed in degrees/s
+   PRINT_SPEED  // print speed in Hz
+   PRINT_DIFF  // print encoder count difference
 */
 #define PRINT_SEPARATOR 1
-#define PRINT_ENCODER   1
+#define PRINT_ENCODER   0
 #define PRINT_DEGREES   0
 #define PRINT_SPEED     1
+#define PRINT_DIFF      1
 
  // Pin Number Mapping (PINOUT)
  #define FLEX_PIN 18   //Interrupt
@@ -31,18 +33,20 @@
  #define ENCODEB  2   //Interrupt
  #define MOTORC   A14  //GPIO
  #define MOTORD   A13  //GPIO
- // 5 and 6 skipped because both come from Timer0, which I'm using for the
- // timer compare already, and I don't want to overuse it if I can help it.
+ // 13 and 4 skipped because both come from Timer0, used by millis.
+ // 12 and 11 skipped becaused used by Timer 1, which causes the PWM to be
+ // distorted.
+ // Source: http://playground.arduino.cc/Main/TimerPWMCheatsheet
 
 //PID Constants
- #define CNTSPERREV 600. //estimate
- #define SAMPLETIME 0.5*0.0000001
+ #define CNTSPERREV (600.) //estimate
+ #define SAMPLETIME (0.5*0.0000001*65536)
  #define KP (1)
  #define KD (1)
  #define KI (1)
  #define DESIREDHZ (1.)
 
- //Definitions for AVR functions.
+ //Definitions for AVR pin setting functions.
  #define sbi(port,bit) \
     (port) |= (1 << (bit))
  #define cbi(port,bit) \
@@ -70,6 +74,7 @@
  volatile unsigned int encoder_cnt = 0;
  volatile double encode_speed = 0.;
  volatile unsigned int last_cnt_forspeed = 0;
+ volatile int encode_diff = 0;
 
  // Servos
  Servo bridge_servo;
@@ -91,6 +96,7 @@ void setup() {
   pinMode(MOTORC, OUTPUT);
   pinMode(MOTORD, OUTPUT);
   pinMode(MOT_PWM, OUTPUT);
+
   pinMode(13, OUTPUT); // this is the bultin LED
 
   // Servos
@@ -112,7 +118,7 @@ void setup() {
   TCCR1A = 0; // This is important!!
   TCCR1B = 0; // This is important!!
   cbi(PRR0, PRTIM1);
-  // Select clock/8 which is about 2 Mhz or 0.5*10-6 s
+  // Select clock/8 which is about 2 MHz or 0.5*10-6 s.
   sbi(TCCR1B, CS11);
   // Set interrupt on overflow of timer 1
   sbi(TIMSK1, TOIE1);
@@ -128,9 +134,9 @@ void setup() {
   bridge_toggle = 0;
 
   // Test for lab.
-  digitalWrite(MOTORC, LOW);
+  digitalWrite(MOTORC, HIGH);
   digitalWrite(MOTORD, LOW);
-  analogWrite(MOT_PWM,125);
+  analogWrite(MOT_PWM,255);
   
 }
 
@@ -178,8 +184,11 @@ void loop() {
     #endif
     #if PRINT_SPEED
       Serial.print("Speed: ");
-      //I would rather calculate this stuff in an RTI, but my RTI is so small, I only see like two cnts ever.
       Serial.println(encode_speed);
+    #endif
+    #if PRINT_DIFF
+      Serial.print("Diff: ");
+      Serial.println(encode_diff);
     #endif
     last_tx = millis();
   }
@@ -193,7 +202,8 @@ ISR(TIMER1_OVF_vect) {
     // Interrupt will be used to change the PWM via PID.
     // For this function, I'm tracking everything in Hz.
 
-    encode_speed = radFromCnts(encoder_cnt - last_cnt_forspeed)/(2*PI*SAMPLETIME);
+    encode_speed = ((encoder_cnt - last_cnt_forspeed)*2*PI)/(CNTSPERREV*SAMPLETIME);
+    encode_diff = encoder_cnt - last_cnt_forspeed;
     last_cnt_forspeed = encoder_cnt;
 
     /*
@@ -207,6 +217,7 @@ ISR(TIMER1_OVF_vect) {
     last_cnt = encoder_cnt;
     */
 
+    digitalWrite(13, !digitalRead(13));
 
 }
 
