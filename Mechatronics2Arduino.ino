@@ -13,12 +13,14 @@
    PRINT_DEGREES // print position of motor every few seconds
    PRINT_SPEED  // print speed in Hz
    PRINT_DIFF  // print encoder count difference
+   PRINT_PWM // print pwm from PID
 */
 #define PRINT_SEPARATOR 1
 #define PRINT_ENCODER   0
 #define PRINT_DEGREES   0
 #define PRINT_SPEED     1
 #define PRINT_DIFF      1
+#define PRINT_PWM       1
 
  // Pin Number Mapping (PINOUT)
  #define FLEX_PIN 18   //Interrupt
@@ -40,11 +42,11 @@
 
 //PID Constants
  #define CNTSPERREV (600.) //estimate
- #define SAMPLETIME (0.5*0.0000001*65536)
- #define KP (1)
- #define KD (1)
- #define KI (1)
- #define DESIREDHZ (1.)
+#define SAMPLETIME 0.032 //s
+#define KP (20.)
+#define KD (7.)
+#define KI (2.)
+ #define DESIREDHZ (3.)
 
  //Definitions for AVR pin setting functions.
  #define sbi(port,bit) \
@@ -75,6 +77,8 @@
  volatile double encode_speed = 0.;
  volatile unsigned int last_cnt_forspeed = 0;
  volatile int encode_diff = 0;
+ volatile int summederror = 0;
+ volatile int newPWM = 0;
 
  // Servos
  Servo bridge_servo;
@@ -134,9 +138,9 @@ void setup() {
   bridge_toggle = 0;
 
   // Test for lab.
+  analogWrite(MOT_PWM, 255);
   digitalWrite(MOTORC, HIGH);
   digitalWrite(MOTORD, LOW);
-  analogWrite(MOT_PWM,255);
   
 }
 
@@ -190,6 +194,10 @@ void loop() {
       Serial.print("Diff: ");
       Serial.println(encode_diff);
     #endif
+    #if PRINT_PWM
+       Serial.print("PWM Out: ");
+       Serial.println(newPWM);
+    #endif
     last_tx = millis();
   }
 
@@ -202,20 +210,28 @@ ISR(TIMER1_OVF_vect) {
     // Interrupt will be used to change the PWM via PID.
     // For this function, I'm tracking everything in Hz.
 
+    // Calculate Speed.
     encode_speed = ((encoder_cnt - last_cnt_forspeed)*2*PI)/(CNTSPERREV*SAMPLETIME);
     encode_diff = encoder_cnt - last_cnt_forspeed;
     last_cnt_forspeed = encoder_cnt;
 
-    /*
-    static double summed_error;
-    static unsigned double last_cnt;
-    int deriv = encoder_cnt - last_cnt; // This will be a really small number.
+    // PID Controller for speed.
+    // I think this only will work is moving in one direction.
+    summederror += (DESIREDHZ - encode_speed);
+    if (DESIREDHZ == encode_speed) { // Antiwindup.
+        summederror = 0;
+    }
+    newPWM = KP*(DESIREDHZ-encode_speed) + KD*encode_diff + KI*summederror;
+    /*Limit checks. */
+    if(newPWM > 255) { 
+        newPWM = 255;
+    }
+    if(newPWM < 0) {
+        newPWM = 0;
+    }
 
-    summed_error += 
-
-
-    last_cnt = encoder_cnt;
-    */
+    analogWrite(MOT_PWM, newPWM); // Actually write stuff.
+    // TODO: Add direction stuff.
 
     digitalWrite(13, !digitalRead(13));
 
