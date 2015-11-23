@@ -14,13 +14,17 @@
    PRINT_SPEED  // print speed in Hz
    PRINT_DIFF  // print encoder count difference
    PRINT_PWM // print pwm from PID
-*/
+   PRINT_SEVSEG // print values written to Port L
+   PRINT_SCORE // print score
+ */
 #define PRINT_SEPARATOR 1
 #define PRINT_ENCODER   0
 #define PRINT_DEGREES   0
-#define PRINT_SPEED     1
-#define PRINT_DIFF      1
-#define PRINT_PWM       1
+#define PRINT_SPEED     0
+#define PRINT_DIFF      0
+#define PRINT_PWM       0
+#define PRINT_SEVSEG    1
+#define PRINT_SCORE     1
 
  // Pin Number Mapping (PINOUT)
  #define FLEX_PIN 18   //Interrupt
@@ -35,18 +39,19 @@
  #define ENCODEB  2   //Interrupt
  #define MOTORC   A14  //GPIO
  #define MOTORD   A13  //GPIO
+ #define SEVSEG   PORTL //GPIO Pins 35-42 for Seven Seg
  // 13 and 4 skipped because both come from Timer0, used by millis.
  // 12 and 11 skipped becaused used by Timer 1, which causes the PWM to be
  // distorted.
  // Source: http://playground.arduino.cc/Main/TimerPWMCheatsheet
 
 //PID Constants
- #define CNTSPERREV (600.) //estimate
-#define SAMPLETIME 0.032 //s
+#define CNTSPERREV (600.) //estimate
+#define SAMPLETIME (0.032) //s
 #define KP (20.)
 #define KD (7.)
 #define KI (2.)
- #define DESIREDHZ (3.)
+#define DESIREDHZ (3.)
 
  //Definitions for AVR pin setting functions.
  #define sbi(port,bit) \
@@ -67,7 +72,7 @@
 
  // Global Variables.
  // (Can I get rid of some of these by using statics?)
- int score = 0;
+int score = 0;
  bool bridge_toggle = 0;
  bool bridge_down = 0;
  long bridge_down_time = 0;
@@ -84,6 +89,10 @@
  Servo bridge_servo;
  Servo wall1_servo;
  Servo wall2_servo;
+
+// Macros for 7 Seg.
+#define print7seg(score) \
+    ((((score)/10)<<4) | ((score)%10)) 
 
 void setup() {
   // put your setup code here, to run once:
@@ -131,11 +140,14 @@ void setup() {
   // Reset initial status of globals. Doesn't seem to reset otherwise...
   // Probably because they are volatile?
   // (Are these needed? They don't hurt anything...)
-  score = 0;
+  //score = 0;
   bridge_down = 0;
   bridge_down_time = 0;
   wall_swap_time = millis();
   bridge_toggle = 0;
+
+  // Seven Segment Display Set Up
+  DDRL = 0xff; // All of PortL is output is output.
 
   // Test for lab.
   analogWrite(MOT_PWM, 255);
@@ -198,9 +210,18 @@ void loop() {
        Serial.print("PWM Out: ");
        Serial.println(newPWM);
     #endif
+    #if PRINT_SEVSEG
+       Serial.print("Sev Seg Port: ");
+       Serial.println(SEVSEG);
+    #endif   
+    #if PRINT_SCORE
+       Serial.print("Score: ");
+       Serial.println(score);
+    #endif   
     last_tx = millis();
   }
 
+  SEVSEG = print7seg(score);
 }
 
 
