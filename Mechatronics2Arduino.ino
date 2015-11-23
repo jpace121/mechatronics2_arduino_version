@@ -18,13 +18,13 @@
    PRINT_SCORE // print score
  */
 #define PRINT_SEPARATOR 1
-#define PRINT_ENCODER   0
+#define PRINT_ENCODER   1
 #define PRINT_DEGREES   0
-#define PRINT_SPEED     0
+#define PRINT_SPEED     1
 #define PRINT_DIFF      0
 #define PRINT_PWM       0
-#define PRINT_SEVSEG    1
-#define PRINT_SCORE     1
+#define PRINT_SEVSEG    0
+#define PRINT_SCORE     0
 
  // Pin Number Mapping (PINOUT)
  #define FLEX_PIN 18   //Interrupt
@@ -49,8 +49,8 @@
 #define CNTSPERREV (600.) //estimate
 #define SAMPLETIME (0.032) //s
 #define KP (20.)
-#define KD (7.)
-#define KI (2.)
+#define KD (7.5)
+#define KI (3.)
 #define DESIREDHZ (3.)
 
  //Definitions for AVR pin setting functions.
