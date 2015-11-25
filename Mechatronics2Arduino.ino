@@ -244,15 +244,21 @@ ISR(TIMER1_OVF_vect) {
     }
     newPWM = KP*(DESIREDHZ-encode_speed) + KD*encode_diff + KI*summederror;
     /*Limit checks. */
-    if(newPWM > 255) { 
+    if(abs(newPWM) > 255) { 
         newPWM = 255;
     }
     if(newPWM < 0) {
-        newPWM = 0;
+        // Set direction opposite.
+        digitalWrite(MOTORC, LOW);
+        digitalWrite(MOTORD, HIGH);
+        analogWrite(MOT_PWM, -newPWM); // Actually write stuff.
     }
-
-    analogWrite(MOT_PWM, newPWM); // Actually write stuff.
-    // TODO: Add direction stuff.
+    if( newPWM > 0) {
+        // Set direction same as now.
+        digitalWrite(MOTORC, HIGH);
+        digitalWrite(MOTORD, LOW);
+        analogWrite(MOT_PWM, newPWM); // Actually write stuff.
+    }
 
     digitalWrite(13, !digitalRead(13));
 
