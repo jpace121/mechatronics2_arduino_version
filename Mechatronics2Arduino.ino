@@ -1,3 +1,5 @@
+#include <Adafruit_LEDBackpack.h>
+#include <Adafruit_GFX.h>
 #include <Servo.h>
 
 /*
@@ -21,8 +23,8 @@
 #define PRINT_ENCODER   1
 #define PRINT_DEGREES   0
 #define PRINT_SPEED     1
-#define PRINT_DIFF      0
-#define PRINT_PWM       0
+#define PRINT_DIFF      1
+#define PRINT_PWM       1
 #define PRINT_SEVSEG    0
 #define PRINT_SCORE     0
 
@@ -51,7 +53,7 @@
 #define KP (20.)
 #define KD (7.5)
 #define KI (3.)
-#define DESIREDHZ (3.)
+#define DESIREDHZ (1.)
 
  //Definitions for AVR pin setting functions.
  #define sbi(port,bit) \
