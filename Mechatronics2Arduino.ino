@@ -16,17 +16,17 @@
    PRINT_SPEED  // print speed in Hz
    PRINT_DIFF  // print encoder count difference
    PRINT_PWM // print pwm from PID
-   PRINT_SEVSEG // print values written to Port L
    PRINT_SCORE // print score
+   PRINT_PCINT //print which PCINT triggered
  */
 #define PRINT_SEPARATOR 1
-#define PRINT_ENCODER   1
+#define PRINT_ENCODER   0
 #define PRINT_DEGREES   0
-#define PRINT_SPEED     1
-#define PRINT_DIFF      1
-#define PRINT_PWM       1
-#define PRINT_SEVSEG    0
-#define PRINT_SCORE     0
+#define PRINT_SPEED     0
+#define PRINT_DIFF      0
+#define PRINT_PWM       0
+#define PRINT_SCORE     1
+#define PRINT_PCINT     1
 
  // Pin Number Mapping (PINOUT)
  #define FLEX_PIN 18   //Interrupt
@@ -60,7 +60,7 @@
  #define sbi(port,bit) \
     (port) |= (1 << (bit))
  #define cbi(port,bit) \
-    (port) &= ~(1 << (bit)) 
+    (port) &= ~(1 << (bit))
 
  //Servo Position Constants
  #define BRIDGEUP 0
@@ -92,6 +92,9 @@ int score = 0;
  Servo bridge_servo;
  Servo wall1_servo;
  Servo wall2_servo;
+
+// Alphanumeric displays
+Adafruit_AlphaNum4 alpha4 = Adafruit_AlphaNum4();
 
 // Macros for 7 Seg.
 #define print7seg(score) \
@@ -138,6 +141,7 @@ void setup() {
   sei(); //reenable interrupts
 
   // set up pc interrupt for scoring, which frees the i2c pin.
+  DDRB &= ~((1 << 7) | (1 << 6) | (1 << 5)); // mark as input (0)
   sbi(PCICR,PCIE0); // enable pcinterrupts for Port B pins (50-53, 10-13)
   PCMSK0 = 0; // clear mask
   sbi(PCMSK0,PCINT5); //turn on for PB5
@@ -158,6 +162,14 @@ void setup() {
   analogWrite(MOT_PWM, 255);
   digitalWrite(MOTORC, HIGH);
   digitalWrite(MOTORD, LOW);
+
+  // Set up alphanumeric display.
+  alpha4.begin(0x70);
+  alpha4.writeDigitAscii(0,'0');
+  alpha4.writeDigitAscii(1,'0');
+  alpha4.writeDigitAscii(2,'0');
+  alpha4.writeDigitAscii(3,'0');
+  alpha4.writeDisplay();
   
 }
 
@@ -215,10 +227,6 @@ void loop() {
        Serial.print("PWM Out: ");
        Serial.println(newPWM);
     #endif
-    #if PRINT_SEVSEG
-       Serial.print("Sev Seg Port: ");
-       Serial.println(SEVSEG);
-    #endif   
     #if PRINT_SCORE
        Serial.print("Score: ");
        Serial.println(score);
@@ -226,7 +234,8 @@ void loop() {
     last_tx = millis();
   }
 
-  SEVSEG = print7seg(score);
+  scoreToDisplay(score);
+
 }
 
 
@@ -269,13 +278,31 @@ ISR(TIMER1_OVF_vect) {
 
 }
 
- double degreesFromCnts(unsigned int cnt) {
+double degreesFromCnts(unsigned int cnt) {
     return (double) ((cnt)*(360./CNTSPERREV));
  }
 
 double radFromCnts(unsigned int cnt) {
     return (double) ((cnt)*(2*PI/CNTSPERREV));
  }
+
+void scoreToDisplay(int val) {
+    if(val > 9999) { // check for overflow
+        val = 0;
+    }
+    // I don't liek how this changes val...
+    int thous = val/1000;
+    val = val%1000;
+    int hunds = val/100;
+    val = val % 100;
+    int tens = val / 10;
+    int ones = val % 10;
+    alpha4.writeDigitAscii(0,(char)(thous+48));
+    alpha4.writeDigitAscii(1,(char)(hunds+48));
+    alpha4.writeDigitAscii(2,(char)(tens+48));
+    alpha4.writeDigitAscii(3,(char)(ones+48));
+    alpha4.writeDisplay();
+}
 
 /*
  Encoder stuff stolen from:
@@ -311,16 +338,31 @@ void flex_handler() {
 
 // IR sensor interrupt.
 ISR(PCINT0_vect) {
-    byte PinState = PINB; // get value once and stay the same
+    byte PinState = PINB & 0b11100000; // mask to remove accidental
+                                    // reads of other pins
+    static byte lastPin;
 
-    if(PinState | IR1) {
+    // I need to check to see if problem is only debouncing or is it worse?
+
+    if(PinState & IR1) {
+        #if PRINT_PCINT
+            Serial.println("IR1");
+        #endif
         score += 1;
     }
-    if(PinSate | IR2) {
+    if(PinState & IR2) {
+        #if PRINT_PCINT
+            Serial.println("IR2");
+        #endif
         score += 2;
     }
-    if(PinState | IR3) {
+    if(PinState & IR3) {
+        #if PRINT_PCINT
+            Serial.println("IR3");
+        #endif
         score += 3;
     }
+
+    lastPin = PinState;
 }
 
