@@ -30,9 +30,9 @@
 
  // Pin Number Mapping (PINOUT)
  #define FLEX_PIN 18   //Interrupt
- #define IR1      19   //Interrupt
- #define IR2      20  //Interrupt
- #define IR3      21  //Interrupt
+ #define IR1     (1<<5)  //11   //PB5 Interrupt
+ #define IR2     (1<<6)  //12  //PB6 Interrupt 
+ #define IR3     (1<<7)  //13  //PB7 Interrupt
  #define WALL1    9   //PWM 
  #define WALL2    8   //PWM
  #define BRIDGE   7   //PWM
@@ -41,7 +41,8 @@
  #define ENCODEB  2   //Interrupt
  #define MOTORC   A14  //GPIO
  #define MOTORD   A13  //GPIO
- #define SEVSEG   PORTL //GPIO Pins 35-42 for Seven Seg
+#define i2c_CLK  21   //i2c
+#define i2c_DAT  20 //i2c
  // 13 and 4 skipped because both come from Timer0, used by millis.
  // 12 and 11 skipped becaused used by Timer 1, which causes the PWM to be
  // distorted.
@@ -101,9 +102,6 @@ void setup() {
 
   // Attach interrupt pins. Seemingly, marks as input for you...
   attachInterrupt(digitalPinToInterrupt(FLEX_PIN), flex_handler, RISING);
-  attachInterrupt(digitalPinToInterrupt(IR1), ir1_handler, RISING);
-  attachInterrupt(digitalPinToInterrupt(IR2), ir2_handler, RISING);
-  attachInterrupt(digitalPinToInterrupt(IR3), ir3_handler, RISING);
   attachInterrupt(digitalPinToInterrupt(ENCODEA), encoderA_handler, RISING);
   attachInterrupt(digitalPinToInterrupt(ENCODEB), encoderB_handler, RISING);
 
@@ -138,6 +136,13 @@ void setup() {
   // Set interrupt on overflow of timer 1
   sbi(TIMSK1, TOIE1);
   sei(); //reenable interrupts
+
+  // set up pc interrupt for scoring, which frees the i2c pin.
+  sbi(PCICR,PCIE0); // enable pcinterrupts for Port B pins (50-53, 10-13)
+  PCMSK0 = 0; // clear mask
+  sbi(PCMSK0,PCINT5); //turn on for PB5
+  sbi(PCMSK0,PCINT6); //turn on for PB6
+  sbi(PCMSK0,PCINT7); //turn on for PB7
   
   // Reset initial status of globals. Doesn't seem to reset otherwise...
   // Probably because they are volatile?
@@ -148,8 +153,6 @@ void setup() {
   wall_swap_time = millis();
   bridge_toggle = 0;
 
-  // Seven Segment Display Set Up
-  DDRL = 0xff; // All of PortL is output is output.
 
   // Test for lab.
   analogWrite(MOT_PWM, 255);
@@ -306,18 +309,18 @@ void flex_handler() {
   bridge_toggle = 1;
 }
 
-void ir1_handler() {
-  // When IR1 is triggered, increase score by 1
-  score = score + 1;
-}
+// IR sensor interrupt.
+ISR(PCINT0_vect) {
+    byte PinState = PINB; // get value once and stay the same
 
-void ir2_handler(){
-  // When IR2 is triggered, increase score by 2
-  score = score + 2; 
-}
-
-void ir3_handler(){
-  // When IR3 is triggered increase score by 3
-  score = score + 3;
+    if(PinState | IR1) {
+        score += 1;
+    }
+    if(PinSate | IR2) {
+        score += 2;
+    }
+    if(PinState | IR3) {
+        score += 3;
+    }
 }
 
