@@ -20,13 +20,13 @@
    PRINT_PCINT //print which PCINT triggered
  */
 #define PRINT_SEPARATOR 1
-#define PRINT_ENCODER   0
+#define PRINT_ENCODER   1
 #define PRINT_DEGREES   0
-#define PRINT_SPEED     0
-#define PRINT_DIFF      0
-#define PRINT_PWM       0
-#define PRINT_SCORE     1
-#define PRINT_PCINT     1
+#define PRINT_SPEED     1
+#define PRINT_DIFF      1
+#define PRINT_PWM       1
+#define PRINT_SCORE     0
+#define PRINT_PCINT     0
 
  // Pin Number Mapping (PINOUT)
  #define FLEX_PIN 18   //Interrupt
@@ -51,9 +51,9 @@
 //PID Constants
 #define CNTSPERREV (600.) //estimate
 #define SAMPLETIME (0.032) //s
-#define KP (20.)
-#define KD (7.5)
-#define KI (3.)
+#define KP (27.)
+#define KD (12.)
+#define KI (0.2)
 #define DESIREDHZ (1.)
 
  //Definitions for AVR pin setting functions.
@@ -151,7 +151,7 @@ void setup() {
   // Reset initial status of globals. Doesn't seem to reset otherwise...
   // Probably because they are volatile?
   // (Are these needed? They don't hurt anything...)
-  //score = 0;
+  score = 0;
   bridge_down = 0;
   bridge_down_time = 0;
   wall_swap_time = millis();
@@ -265,7 +265,7 @@ ISR(TIMER1_OVF_vect) {
         // Set direction opposite.
         digitalWrite(MOTORC, LOW);
         digitalWrite(MOTORD, HIGH);
-        analogWrite(MOT_PWM, -newPWM); // Actually write stuff.
+        analogWrite(MOT_PWM, -newPWM); // Actually write stuff, with change in direction.
     }
     if( newPWM > 0) {
         // Set direction same as now.
