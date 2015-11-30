@@ -51,9 +51,9 @@
 //PID Constants
 #define CNTSPERREV (600.) //estimate
 #define SAMPLETIME (0.032) //s
-#define KP (39.)
-#define KD (12.)
-#define KI (0.3)
+#define KP (53.)
+#define KD (19.)
+#define KI (0.7)
 #define DESIREDHZ (1.)
 
  //Definitions for AVR pin setting functions.
@@ -245,6 +245,8 @@ ISR(TIMER1_OVF_vect) {
     // Interrupt will be used to change the PWM via PID.
     // For this function, I'm tracking everything in Hz.
 
+    int err = (1*2*PI)/(CNTSPERREV*SAMPLETIME); //allow us to be off by one count
+
     // Calculate Speed.
     encode_speed = ((encoder_cnt - last_cnt_forspeed)*2*PI)/(CNTSPERREV*SAMPLETIME);
     encode_diff = encoder_cnt - last_cnt_forspeed;
@@ -253,13 +255,20 @@ ISR(TIMER1_OVF_vect) {
     // PID Controller for speed.
     // I think this only will work is moving in one direction.
     summederror += (DESIREDHZ - encode_speed);
-    if (DESIREDHZ == encode_speed) { // Antiwindup.
+    // Adjustment to the provided anti-windup code. We never exactly hit our Hz value,
+    // so use and error value to be close-ish.
+    /*if ((encode_speed > (DESIREDHZ - err)) && (encode_speed < (DESIREDHZ + err))){
         summederror = 0;
-    }
+        }*/
     newPWM = KP*(DESIREDHZ-encode_speed) + KD*encode_diff + KI*summederror;
     /*Limit checks. */
-    if(abs(newPWM) > 255) { 
+    if(newPWM > 255) { 
         newPWM = 255;
+        summederror -= (DESIREDHZ - encode_speed); //anti-windup
+    }
+    if(newPWM < -255) {
+        newPWM = -255;
+        summederror -= (DESIREDHZ - encode_speed); //anti-windup
     }
     if(newPWM < 0) {
         // Set direction opposite.
