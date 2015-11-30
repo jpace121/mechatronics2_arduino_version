@@ -22,11 +22,11 @@
 #define PRINT_SEPARATOR 1
 #define PRINT_ENCODER   0
 #define PRINT_DEGREES   0
-#define PRINT_SPEED     0
-#define PRINT_DIFF      0
-#define PRINT_PWM       0
+#define PRINT_SPEED     1
+#define PRINT_DIFF      1
+#define PRINT_PWM       1
 #define PRINT_SCORE     0
-#define PRINT_PCINT     1
+#define PRINT_PCINT     0
 
  // Pin Number Mapping (PINOUT)
  #define FLEX_PIN 18   //Interrupt
@@ -51,9 +51,9 @@
 //PID Constants
 #define CNTSPERREV (600.) //estimate
 #define SAMPLETIME (0.032) //s
-#define KP (27.)
+#define KP (39.)
 #define KD (12.)
-#define KI (0.2)
+#define KI (0.3)
 #define DESIREDHZ (1.)
 
  //Definitions for AVR pin setting functions.
