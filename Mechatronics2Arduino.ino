@@ -20,13 +20,13 @@
    PRINT_PCINT //print which PCINT triggered
  */
 #define PRINT_SEPARATOR 1
-#define PRINT_ENCODER   1
+#define PRINT_ENCODER   0
 #define PRINT_DEGREES   0
-#define PRINT_SPEED     1
-#define PRINT_DIFF      1
-#define PRINT_PWM       1
+#define PRINT_SPEED     0
+#define PRINT_DIFF      0
+#define PRINT_PWM       0
 #define PRINT_SCORE     0
-#define PRINT_PCINT     0
+#define PRINT_PCINT     1
 
  // Pin Number Mapping (PINOUT)
  #define FLEX_PIN 18   //Interrupt
@@ -342,21 +342,23 @@ ISR(PCINT0_vect) {
                                     // reads of other pins
     static byte lastPin;
 
-    // I need to check to see if problem is only debouncing or is it worse?
-
+    /*
+      By making these else-if, can guarantee all won't go off on first interrupt
+      if something is not correctly plugged in.
+     */
     if((PinState & IR1) && ((lastPin & IR1) != (PinState & IR1))) {
         #if PRINT_PCINT
             Serial.println("IR1");
         #endif
         score += 1;
     }
-    if((PinState & IR2) && ((lastPin & IR2) != (PinState & IR2))) {
+    else if((PinState & IR2) && ((lastPin & IR2) != (PinState & IR2))) {
         #if PRINT_PCINT
             Serial.println("IR2");
         #endif
         score += 2;
     }
-    if((PinState & IR3) && ((lastPin & IR3) != (PinState & IR3))) {
+    else if((PinState & IR3) && ((lastPin & IR3) != (PinState & IR3))) {
         #if PRINT_PCINT
             Serial.println("IR3");
         #endif
