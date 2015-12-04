@@ -19,13 +19,13 @@
    PRINT_SCORE // print score
    PRINT_PCINT //print which PCINT triggered
  */
-#define PRINT_SEPARATOR 1
+#define PRINT_SEPARATOR 0
 #define PRINT_ENCODER   0
 #define PRINT_DEGREES   0
-#define PRINT_SPEED     1
-#define PRINT_DIFF      1
-#define PRINT_PWM       1
-#define PRINT_SCORE     0
+#define PRINT_SPEED     0
+#define PRINT_DIFF      0
+#define PRINT_PWM       0
+#define PRINT_SCORE     1
 #define PRINT_PCINT     0
 
  // Pin Number Mapping (PINOUT)
@@ -54,7 +54,7 @@
 #define KP (53.)
 #define KD (19.)
 #define KI (0.7)
-#define DESIREDHZ (1.)
+#define DESIREDHZ (0.6)
 
  //Definitions for AVR pin setting functions.
  #define sbi(port,bit) \
