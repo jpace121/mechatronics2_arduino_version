@@ -19,13 +19,13 @@
    PRINT_SCORE // print score
    PRINT_PCINT //print which PCINT triggered
  */
-#define PRINT_SEPARATOR 0
+#define PRINT_SEPARATOR 1
 #define PRINT_ENCODER   0
 #define PRINT_DEGREES   0
-#define PRINT_SPEED     0
-#define PRINT_DIFF      0
-#define PRINT_PWM       0
-#define PRINT_SCORE     1
+#define PRINT_SPEED     1
+#define PRINT_DIFF      1
+#define PRINT_PWM       1
+#define PRINT_SCORE     0
 #define PRINT_PCINT     0
 
  // Pin Number Mapping (PINOUT)
@@ -37,8 +37,8 @@
  #define WALL2    8   //PWM
  #define BRIDGE   7   //PWM
  #define MOT_PWM  10   //PWM
- #define ENCODEA  3   //Interrupt
- #define ENCODEB  2   //Interrupt
+ #define ENCODEA  2   //Interrupt
+ #define ENCODEB  3   //Interrupt
  #define MOTORC   A14  //GPIO
  #define MOTORD   A13  //GPIO
 #define i2c_CLK  21   //i2c
@@ -51,10 +51,10 @@
 //PID Constants
 #define CNTSPERREV (600.) //estimate
 #define SAMPLETIME (0.032) //s
-#define KP (53.)
-#define KD (19.)
-#define KI (0.7)
-#define DESIREDHZ (0.6)
+#define KP (45.)
+#define KD (15.)
+#define KI (30.)
+#define DESIREDHZ ( 1.)
 
  //Definitions for AVR pin setting functions.
  #define sbi(port,bit) \
