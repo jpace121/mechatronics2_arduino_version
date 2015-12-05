@@ -54,7 +54,7 @@
 #define KP (45.)
 #define KD (15.)
 #define KI (30.)
-#define DESIREDHZ ( 1.)
+#define DESIREDHZ (1.)
 
  //Definitions for AVR pin setting functions.
  #define sbi(port,bit) \
@@ -274,7 +274,7 @@ ISR(TIMER1_OVF_vect) {
         // Set direction opposite.
         digitalWrite(MOTORC, LOW);
         digitalWrite(MOTORD, HIGH);
-        analogWrite(MOT_PWM, -newPWM); // Actually write stuff, with change in direction.
+        analogWrite(MOT_PWM, -1*newPWM); // Actually write stuff, with change in direction.
     }
     if( newPWM > 0) {
         // Set direction same as now.
