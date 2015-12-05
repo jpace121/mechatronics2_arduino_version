@@ -19,8 +19,9 @@
    PRINT_SCORE // print score
    PRINT_PCINT //print which PCINT triggered
    OFFWINDMILL //turns of windmill
+   OFFARMS    //turns of servo arms
  */
-#define PRINT_SEPARATOR 0
+#define PRINT_SEPARATOR 1
 #define PRINT_ENCODER   0
 #define PRINT_DEGREES   0
 #define PRINT_SPEED     0
@@ -28,7 +29,8 @@
 #define PRINT_PWM       0
 #define PRINT_SCORE     0
 #define PRINT_PCINT     0
-#define OFFWINDMILL     1
+#define OFFWINDMILL     0
+#define OFFARMS         1
 
  // Pin Number Mapping (PINOUT)
  #define FLEX_PIN 18   //Interrupt
@@ -119,13 +121,20 @@ void setup() {
 
   // Servos
   bridge_servo.attach(BRIDGE);
+  #if OFFARMS
+  #else
+  // why the hell does attaching these casue spike regardless if anything else is on?
   wall1_servo.attach(WALL1);
   wall2_servo.attach(WALL2);
+  #endif
 
   // Put servos in initial position.
   bridge_servo.write(BRIDGEUP);
+  #if OFFARMS
+  #else
   wall1_servo.write(0);
   wall2_servo.write(90);
+  #endif
 
   // Set up serial monitor.
   Serial.begin(9600);
@@ -195,6 +204,8 @@ void loop() {
     bridge_down = !bridge_down;
   }
 
+  #if OFFARMS
+  #else
   if((millis() - wall_swap_time) > 2000){
     if(wall1_servo.read() == 90){
       wall1_servo.write(0);
@@ -205,6 +216,7 @@ void loop() {
     }
     wall_swap_time = millis();
   }
+  #endif
 
   // Debug serial prints, once every 1 seconds.
   if((millis()-last_tx) > 1000){
