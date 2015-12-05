@@ -18,15 +18,17 @@
    PRINT_PWM // print pwm from PID
    PRINT_SCORE // print score
    PRINT_PCINT //print which PCINT triggered
+   OFFWINDMILL //turns of windmill
  */
-#define PRINT_SEPARATOR 1
+#define PRINT_SEPARATOR 0
 #define PRINT_ENCODER   0
 #define PRINT_DEGREES   0
-#define PRINT_SPEED     1
-#define PRINT_DIFF      1
-#define PRINT_PWM       1
+#define PRINT_SPEED     0
+#define PRINT_DIFF      0
+#define PRINT_PWM       0
 #define PRINT_SCORE     0
 #define PRINT_PCINT     0
+#define OFFWINDMILL     1
 
  // Pin Number Mapping (PINOUT)
  #define FLEX_PIN 18   //Interrupt
@@ -130,7 +132,7 @@ void setup() {
 
   // Set up RTI handler.
   // Turn on Timer 1
-  cli(); //disable interrupts
+  /*cli(); //disable interrupts
   TCCR1A = 0; // This is important!!
   TCCR1B = 0; // This is important!!
   cbi(PRR0, PRTIM1);
@@ -139,7 +141,8 @@ void setup() {
   // Set interrupt on overflow of timer 1
   sbi(TIMSK1, TOIE1);
   sei(); //reenable interrupts
-
+  */
+  
   // set up pc interrupt for scoring, which frees the i2c pin.
   DDRB &= ~((1 << 7) | (1 << 6) | (1 << 5)); // mark as input (0)
   sbi(PCICR,PCIE0); // enable pcinterrupts for Port B pins (50-53, 10-13)
@@ -159,9 +162,12 @@ void setup() {
 
 
   // Test for lab.
+#if OFFWINDMILL
+#else
   analogWrite(MOT_PWM, 255);
   digitalWrite(MOTORC, HIGH);
   digitalWrite(MOTORD, LOW);
+#endif
 
   // Set up alphanumeric display.
   alpha4.begin(0x70);
@@ -239,7 +245,8 @@ void loop() {
 }
 
 
-
+#if OFFWINDMILL
+#else
 ISR(TIMER1_OVF_vect) {
     // Interrupt Service Routine for the output compare.
     // Interrupt will be used to change the PWM via PID.
@@ -286,6 +293,7 @@ ISR(TIMER1_OVF_vect) {
     digitalWrite(13, !digitalRead(13));
 
 }
+#endif
 
 double degreesFromCnts(unsigned int cnt) {
     return (double) ((cnt)*(360./CNTSPERREV));
