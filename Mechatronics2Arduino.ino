@@ -132,7 +132,7 @@ void setup() {
 
   // Set up RTI handler.
   // Turn on Timer 1
-  /*cli(); //disable interrupts
+  cli(); //disable interrupts
   TCCR1A = 0; // This is important!!
   TCCR1B = 0; // This is important!!
   cbi(PRR0, PRTIM1);
@@ -141,8 +141,8 @@ void setup() {
   // Set interrupt on overflow of timer 1
   sbi(TIMSK1, TOIE1);
   sei(); //reenable interrupts
-  */
   
+  /* 
   // set up pc interrupt for scoring, which frees the i2c pin.
   DDRB &= ~((1 << 7) | (1 << 6) | (1 << 5)); // mark as input (0)
   sbi(PCICR,PCIE0); // enable pcinterrupts for Port B pins (50-53, 10-13)
@@ -150,6 +150,7 @@ void setup() {
   sbi(PCMSK0,PCINT5); //turn on for PB5
   sbi(PCMSK0,PCINT6); //turn on for PB6
   sbi(PCMSK0,PCINT7); //turn on for PB7
+  */
   
   // Reset initial status of globals. Doesn't seem to reset otherwise...
   // Probably because they are volatile?
