@@ -27,10 +27,10 @@
 #define PRINT_SPEED     0
 #define PRINT_DIFF      0
 #define PRINT_PWM       0
-#define PRINT_SCORE     0
-#define PRINT_PCINT     0
+#define PRINT_SCORE     1
+#define PRINT_PCINT     1
 #define OFFWINDMILL     0
-#define OFFARMS         1
+#define OFFARMS         0
 
  // Pin Number Mapping (PINOUT)
  #define FLEX_PIN 18   //Interrupt
